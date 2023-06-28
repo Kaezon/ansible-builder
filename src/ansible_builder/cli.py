@@ -150,6 +150,22 @@ def add_container_options(parser):
         help='Squash layers in the final image (choices: %(choices)s). Defaults to "%(default)s". (podman only)'
     )
 
+    build_command_parser.add_argument(
+        '--secret',
+        action='append',
+        dest='secrets',
+        help='Build-time secrets references to pass over to docker/podman '
+             'build command. Use in combination with `--mount` argument'
+    )
+
+    build_command_parser.add_argument(
+        '--ssh',
+        action='append',
+        dest='ssh_sockets',
+        help='Build-time SSH sockets references to pass over to docker/podman '
+             'build command. Use in combination with `--mount` argument'
+    )
+
     for p in [create_command_parser, build_command_parser]:
 
         p.add_argument('-f', '--file',
@@ -180,6 +196,12 @@ def add_container_options(parser):
         p.add_argument('--galaxy-required-valid-signature-count',
                        help='The number of signatures that must successfully verify collections from '
                        'ansible-galaxy ~if there are any signatures provided~. See ansible-galaxy doc for more info.')
+        p.add_argument('--mount',
+                       action='append',
+                       dest='mounts',
+                       help="Mounts for all Dockerfile/Containerfile's `RUN` instructions. "
+                            'These should reference the same mounts provided in `--secret` and '
+                            '`--ssh` arguments')
 
     introspect_parser = create_introspect_parser(parser)
 

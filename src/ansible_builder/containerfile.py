@@ -21,7 +21,8 @@ class Containerfile:
                  output_filename=None,
                  galaxy_keyring=None,
                  galaxy_required_valid_signature_count=None,
-                 galaxy_ignore_signature_status_codes=()):
+                 galaxy_ignore_signature_status_codes=(),
+                 mounts=None):
         """
         :param str galaxy_keyring: GPG keyring file used by ansible-galaxy to opportunistically validate collection signatures.
         :param str galaxy_required_valid_signature_count: Number of sigs (prepend + to disallow no sig) required for ansible-galaxy to accept collections.
@@ -43,6 +44,7 @@ class Containerfile:
         self.galaxy_required_valid_signature_count = galaxy_required_valid_signature_count
         self.galaxy_ignore_signature_status_codes = galaxy_ignore_signature_status_codes
         self.steps: list = []
+        self.mounts = mounts or []
 
     def prepare(self):
         """
@@ -174,6 +176,7 @@ class Containerfile:
         self.steps.append("RUN rm -rf /output")
 
         self._prepare_label_steps()
+        self.add_mounts_for_run_steps()
         if self.definition.version >= 3 and (uid := self.definition.options['user']):
             self._prepare_user_steps(uid)
         self._prepare_entrypoint_steps()
@@ -387,6 +390,20 @@ class Containerfile:
             f" --roles-path \"{constants.base_roles_path}\"",
         )
         self.steps.append(f"RUN {env}ansible-galaxy collection install $ANSIBLE_GALAXY_CLI_COLLECTION_OPTS {install_opts}")
+
+    def add_mounts_for_run_steps(self):
+        if not self.mounts:
+            return self.steps
+
+        mounts = " ".join(f"--mount={m}" for m in self.mounts)
+
+        for i, s in enumerate(self.steps):
+            if s.startswith("RUN "):
+                run_cmd = s.split(" ")
+                run_cmd.insert(1, mounts)
+                self.steps[i] = " ".join(run_cmd)
+
+        return self.steps
 
     def _prepare_introspect_assemble_steps(self):
         # The introspect/assemble block is valid if there are any form of requirements

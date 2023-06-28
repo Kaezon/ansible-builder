@@ -16,6 +16,9 @@ class AnsibleBuilder:
                  action=None,
                  filename=constants.default_file,
                  build_args=None,
+                 secrets=None,
+                 ssh_sockets=None,
+                 mounts=None,
                  build_context=constants.default_build_context,
                  tag=None,
                  container_runtime=constants.default_container_runtime,
@@ -58,6 +61,8 @@ class AnsibleBuilder:
             build_context, constants.user_content_subfolder)
         self.container_runtime = container_runtime
         self.build_args = build_args or {}
+        self.secrets = secrets or []
+        self.ssh_sockets = ssh_sockets or []
         self.no_cache = no_cache
         self.prune_images = prune_images
         self.containerfile = Containerfile(
@@ -67,7 +72,8 @@ class AnsibleBuilder:
             output_filename=output_filename,
             galaxy_keyring=galaxy_keyring,
             galaxy_required_valid_signature_count=galaxy_required_valid_signature_count,
-            galaxy_ignore_signature_status_codes=galaxy_ignore_signature_status_codes)
+            galaxy_ignore_signature_status_codes=galaxy_ignore_signature_status_codes,
+            mounts=mounts)
         self.verbosity = verbosity
         self.container_policy, self.container_keyring = self._handle_image_validation_opts(container_policy, container_keyring)
         self.squash = squash
@@ -166,6 +172,9 @@ class AnsibleBuilder:
                 build_arg = f"--build-arg={key}"
 
             command.append(build_arg)
+        
+        command.extend(f"--secret={s}" for s in self.secrets)
+        command.extend(f"--ssh={s}" for s in self.ssh_sockets)
 
         if self.no_cache:
             command.append('--no-cache')
@@ -204,6 +213,7 @@ class AnsibleBuilder:
             if self.container_policy != PolicyChoices.IGNORE:
                 command.append('--pull-always')
 
+        logger.debug("Build command: %s", command)
         command.append(self.build_context)
 
         return command
