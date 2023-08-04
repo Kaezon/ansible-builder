@@ -67,17 +67,16 @@ def run_command(command, capture_output=False, allow_error=False):
     logger.info('Running command:')
     logger.info('  %s', ' '.join(command))
     try:
+        # pylint: disable=R1732
         process = subprocess.Popen(command,
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT)
     except FileNotFoundError:
         msg = f"You do not have {command[0]} installed."
         if command[0] in constants.runtime_files:
+            blurb = {True: 'installed', False: 'not installed'}
             install_summary = ', '.join([
-                '{runtime}: {blurb}'.format(
-                    runtime=runtime,
-                    blurb={True: 'installed', False: 'not installed'}.get(bool(shutil.which(runtime)))
-                ) for runtime in constants.runtime_files
+                f'{runtime}: {blurb.get(bool(shutil.which(runtime)))}' for runtime in constants.runtime_files
             ])
             msg += (
                 f'\nYou do not have {command[0]} installed.\n'
@@ -133,8 +132,7 @@ def write_file(filename: str, lines: list) -> bool:
             if f.read() == new_text:
                 logger.debug("File %s is already up-to-date.", filename)
                 return False
-            else:
-                logger.warning('File %s had modifications and will be rewritten', filename)
+            logger.warning('File %s had modifications and will be rewritten', filename)
     with open(filename, 'w') as f:
         f.write(new_text)
     return True

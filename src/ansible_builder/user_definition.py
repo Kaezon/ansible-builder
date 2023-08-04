@@ -2,10 +2,10 @@ import logging
 import os
 import textwrap
 import tempfile
-import yaml
-
 from pathlib import Path
 from typing import Callable
+
+import yaml
 
 from . import constants
 from .exceptions import DefinitionError
@@ -179,6 +179,7 @@ class UserDefinition:
             _tempfiles.append(tf)
             req_file = tf.name
         elif (is_list := isinstance(req_file, list)) or (isinstance(req_file, str) and '\n' in req_file):
+            # pylint: disable=R1732
             tf = tempfile.NamedTemporaryFile('w')
             if is_list:
                 tf.write('\n'.join(req_file))
@@ -217,9 +218,9 @@ class UserDefinition:
         """
         validate_schema(self.raw)
 
-        for item in constants.CONTEXT_FILES:
+        for item, value in constants.CONTEXT_FILES.items():
             # HACK: non-file deps for dynamic base/builder
-            if not constants.CONTEXT_FILES[item]:
+            if not value:
                 continue
             requirement_path = self.get_dep_abs_path(item)
             if requirement_path:
@@ -252,5 +253,5 @@ class UserDefinition:
                     for directive in steps:
                         if directive.startswith('USER '):
                             logging.warning(
-                                f"Found USER directive in '{step_name}' in 'additional_build_steps'. "
-                                f"Including this directive may cause failures in the build process.")
+                                "Found USER directive in '%s' in 'additional_build_steps'. "
+                                "Including this directive may cause failures in the build process.", step_name)

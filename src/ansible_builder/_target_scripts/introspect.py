@@ -1,11 +1,11 @@
 import argparse
+import importlib.metadata
 import logging
 import os
 import sys
 import yaml
 
 import requirements
-import importlib.metadata
 
 base_collections_path = '/usr/share/ansible/collections'
 default_file = 'execution-environment.yml'
@@ -19,7 +19,7 @@ def line_is_empty(line):
 def read_req_file(path):
     """Provide some minimal error and display handling for file reading"""
     if not os.path.exists(path):
-        print('Expected requirements file not present at: {0}'.format(os.path.abspath(path)))
+        print(f'Expected requirements file not present at: {os.path.abspath(path)}')
     with open(path, 'r') as f:
         return f.read()
 
@@ -99,7 +99,7 @@ def process(data_dir=base_collections_path, user_pip=None, user_bindep=None):
         col_pip_lines, col_sys_lines = process_collection(path)
         CD = CollectionDefinition(path)
         namespace, name = CD.namespace_name()
-        key = '{}.{}'.format(namespace, name)
+        key = f'{namespace}.{name}'
 
         if col_pip_lines:
             py_req[key] = col_pip_lines
@@ -173,12 +173,10 @@ class CollectionDefinition:
         req_file = self.raw.get('dependencies', {}).get(entry)
         if req_file is None:
             return None
-        elif os.path.isabs(req_file):
+        if os.path.isabs(req_file):
             raise RuntimeError(
                 'Collections must specify relative paths for requirements files. '
-                'The file {0} specified by {1} violates this.'.format(
-                    req_file, self.reference_path
-                )
+                f'The file {req_file} specified by {self.reference_path} violates this.'
             )
 
         return req_file
@@ -199,16 +197,16 @@ def simple_combine(reqs):
             base_line = line.split('#')[0].strip()
             if base_line in consolidated:
                 i = consolidated.index(base_line)
-                fancy_lines[i] += ', {}'.format(collection)
+                fancy_lines[i] += f', {collection}'
             else:
-                fancy_line = base_line + '  # from collection {}'.format(collection)
+                fancy_line = f'{base_line}  # from collection {collection}'
                 consolidated.append(base_line)
                 fancy_lines.append(fancy_line)
 
     return fancy_lines
 
 
-def parse_args(args=sys.argv[1:]):
+def parse_args(args=None):
 
     parser = argparse.ArgumentParser(
         prog='introspect',
@@ -217,25 +215,26 @@ def parse_args(args=sys.argv[1:]):
         )
     )
 
-    subparsers = parser.add_subparsers(help='The command to invoke.', dest='action')
-    subparsers.required = True
+    subparsers = parser.add_subparsers(
+        help='The command to invoke.',
+        dest='action',
+        required=True,
+    )
 
     create_introspect_parser(subparsers)
 
-    args = parser.parse_args(args)
-
-    return args
+    return parser.parse_args(args)
 
 
-def run_introspect(args, logger):
+def run_introspect(args, log):
     data = process(args.folder, user_pip=args.user_pip, user_bindep=args.user_bindep)
     if args.sanitize:
-        logger.info('# Sanitized dependencies for %s', args.folder)
+        log.info('# Sanitized dependencies for %s', args.folder)
         data_for_write = data
         data['python'] = sanitize_requirements(data['python'])
         data['system'] = simple_combine(data['system'])
     else:
-        logger.info('# Dependency data for %s', args.folder)
+        log.info('# Dependency data for %s', args.folder)
         data_for_write = data.copy()
         data_for_write['python'] = simple_combine(data['python'])
         data_for_write['system'] = simple_combine(data['system'])
@@ -358,12 +357,12 @@ def sanitize_requirements(collection_py_reqs):
             # Requirement like git+ or http return as-is
             new_line = req.line
         elif req.name:
-            specs = ['{0}{1}'.format(cmp, ver) for cmp, ver in req.specs]
+            specs = [f'{cmp}{ver}' for cmp, ver in req.specs]
             new_line = req.name + ','.join(specs)
         else:
-            raise RuntimeError('Could not process {0}'.format(req.line))
+            raise RuntimeError(f'Could not process {req.line}')
 
-        sanitized.append(new_line + '  # from collection {}'.format(','.join(req.collections)))
+        sanitized.append(f'{new_line}  # from collection {",".join(req.collections)}')
 
     return sanitized
 
@@ -379,8 +378,7 @@ def write_file(filename: str, lines: list) -> bool:
             if f.read() == new_text:
                 logger.debug("File %s is already up-to-date.", filename)
                 return False
-            else:
-                logger.warning('File %s had modifications and will be rewritten', filename)
+            logger.warning('File %s had modifications and will be rewritten', filename)
     with open(filename, 'w') as f:
         f.write(new_text)
     return True

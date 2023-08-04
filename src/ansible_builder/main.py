@@ -34,20 +34,28 @@ class AnsibleBuilder:
                  squash=None,
                  ):
         """
-        :param str galaxy_keyring: GPG keyring file used by ansible-galaxy to opportunistically validate collection signatures.
-        :param str galaxy_required_valid_signature_count: Number of sigs (prepend + to disallow no sig( required for ansible-galaxy to accept collections.
+        :param str galaxy_keyring: GPG keyring file used by ansible-galaxy to
+                                   opportunistically validate collection signatures.
+        :param str galaxy_required_valid_signature_count: Number of sigs (prepend + to disallow no sig) required
+                                                          for ansible-galaxy to accept collections.
         :param str galaxy_ignore_signature_status_codes: GPG Status code to ignore when validating galaxy collections.
         :param str container_policy: The container validation policy. A valid string value from the PolicyChoices enum.
         """
 
         if not galaxy_keyring and (galaxy_required_valid_signature_count or galaxy_ignore_signature_status_codes):
-            raise ValueError("--galaxy-required-valid-signature-count and --galaxy-ignore-signature-status-code may not be set without --galaxy-keyring")
+            raise ValueError(
+                "--galaxy-required-valid-signature-count and --galaxy-ignore-signature-status-code "
+                "may not be set without --galaxy-keyring"
+            )
 
         self.action = action
 
         # Read and validate the EE file early
         self.definition = UserDefinition(filename=filename)
         self.definition.validate()
+
+        if self.definition.version < 3:
+            logger.warning('Found version %s, consider upgrading to version 3 or above', self.definition.version)
 
         self.tags = [constants.default_tag]
         if self.definition.version >= 3 and self.definition.options['tags']:
@@ -75,7 +83,10 @@ class AnsibleBuilder:
             galaxy_ignore_signature_status_codes=galaxy_ignore_signature_status_codes,
             mounts=mounts)
         self.verbosity = verbosity
-        self.container_policy, self.container_keyring = self._handle_image_validation_opts(container_policy, container_keyring)
+        self.container_policy, self.container_keyring = self._handle_image_validation_opts(
+            container_policy,
+            container_keyring
+        )
         self.squash = squash
 
     def _handle_image_validation_opts(self, policy, keyring):
@@ -122,7 +133,7 @@ class AnsibleBuilder:
             # Require the correct policy to be specified
             if resolved_policy is None:
                 raise ValueError('--container-keyring requires --container-policy')
-            elif resolved_policy != PolicyChoices.SIG_REQ:
+            if resolved_policy != PolicyChoices.SIG_REQ:
                 raise ValueError(f'--container-keyring is not valid with --container-policy={resolved_policy.value}')
 
             # Set the keyring to an absolute path to be referenced in the policy file.
