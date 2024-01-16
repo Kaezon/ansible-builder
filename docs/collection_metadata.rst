@@ -3,18 +3,34 @@
 Collection-level dependencies
 =============================
 
-When Ansible Builder installs collections into an execution environment, it also installs the dependencies listed by each collection on Galaxy.
+When Ansible Builder installs collections into an execution environment, it also installs their controller-side Python or system package dependencies listed by each collection on Galaxy.
 
-For Ansible Builder to find and install collection dependencies, those dependencies must be defined in one of these files:
+For Ansible Builder to find and install collection dependencies, those dependencies must be defined in files in a collection repository.
 
-* The ``meta/execution-environment.yml`` file containing the Python
-  and/or bindep requirements or referencing other files listing them.
-* The ``requirements.txt`` file in the root level of the collection.
-* The ``bindep.txt`` file in the root level of the collection.
+.. note::
 
-These files must be included in the packaged collection on Galaxy.
-Ansible Builder cannot install dependencies listed in files that are included in
-the ``build_ignore`` of a collection, because those files are not uploaded to Galaxy.
+  If present, the files below must be included in the packaged collection on Galaxy.
+  Ansible Builder cannot install dependencies listed in files that are included in the ``build_ignore`` of a collection, because those files are not included in the collection artifact.
+
+If you are a collection maintainer, make sure the controller-side dependencies are specified and :ref:`verified<verify_collection_metadata>`.
+
+We recommend you to specify paths to dependency files in the ``meta/execution-environment.yml`` file.
+Here is an example of its content:
+
+.. code:: yaml
+
+    dependencies:
+      python: meta/ee-requirements.txt  # List Python package requirements in the file
+      system: meta/ee-bindep.txt  # List system package requirements in the file
+
+If the ``meta/execution-environment.yml`` file is not present, by default, Ansible Builder will expect the dependencies to be defined in:
+
+* the ``requirements.txt`` file in the collection root directory for Python package requirements
+* the ``bindep.txt`` file in the collection root directory for system package requirements
+
+.. note::
+
+  If your collection uses the ``requirements.txt`` or ``bindep.txt`` files in its root directory for anything else but its controller-side dependencies, for example, for listing testing requirements, make sure you use the ``meta/execution-environment.yml`` file to specify other dependency files for execution environment purposes.
 
 Dependency introspection
 ========================
@@ -24,12 +40,14 @@ If any dependencies are given, the introspection is run by Ansible Builder so th
 A user can see the introspection output during
 the builder intermediate phase using the ``build -v3`` option.
 
+.. _verify_collection_metadata:
+
 How to verify collection-level metadata
 =======================================
 
 .. note::
 
-  Running the introspect command described below is not a part of a typical workflow for building and using execution environments.
+  Running the introspect command described below is not part of a typical workflow for building and using execution environments.
 
 Collection developers can verify that dependencies specified in the collection will be processed correctly by Ansible Builder.
 
@@ -96,4 +114,10 @@ System-level Dependencies
 
 For system packages, use the ``bindep`` format to specify cross-platform requirements, so they can be installed by whichever package management system the execution environment uses. Collections should specify necessary requirements for ``[platform:rpm]``.
 
-Ansible Builder combines system package entries from multiple collections into a single file. Only requirements with *no* profiles (runtime requirements) are installed to the image. Entries from multiple collections which are outright duplicates of each other may be consolidated in the combined file.
+Ansible Builder combines system package entries from multiple collections into a single file.
+
+* Requirements with ``compile`` profile indicate that these requirements are needed to install other requirements (especially Python ones), but are not required to be in the final build.
+* Requirements with ``epel`` profile indicate that EPEL repositories will be enabled before installing these requirements.
+* Only requirements with *no* profiles (runtime requirements) are installed to the image.
+
+Entries from multiple collections which are outright duplicates of each other may be consolidated in the combined file.

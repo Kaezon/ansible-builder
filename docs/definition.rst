@@ -3,7 +3,9 @@
 Execution environment definition
 ================================
 
-You define the content of your execution environment in a YAML file. By default, this file is called ``execution_environment.yml``. This file tells Ansible Builder how to create the build instruction file (Containerfile for Podman, Dockerfile for Docker) and build context for your container image.
+You define the content of your execution environment in a YAML file. By default, this file is called ``execution-environment.yml``
+or ``execution-environment.yaml``. This file tells Ansible Builder how to create the build instruction file
+(``Containerfile`` for Podman, ``Dockerfile`` for Docker) and build context for your container image.
 
 .. note::
    This page documents the definition schema for Ansible Builder 3.x. If you are running an older version of Ansible Builder, you need an older schema version. Please consult older versions of the docs for more information. We recommend using version 3, which offers substantially more configurability and functionality than previous versions.
@@ -74,7 +76,7 @@ Here is a sample version 3 EE file. To use Ansible Builder 3.x, you must specify
         # - RUN $PKGMGR module enable postgresql:15 -y
         # - RUN $PKGMGR install -y postgresql
       prepend_galaxy:
-        - ADD _build/configs/ansible.cfg /etc/ansible/ansible.cfg
+        - COPY _build/configs/ansible.cfg /etc/ansible/ansible.cfg
 
       prepend_final: |
         RUN whoami
@@ -87,6 +89,8 @@ Configuration options
 ---------------------
 
 You may use the configuration YAML keys listed here in your v3 execution environment definition file.
+
+.. _additional_build_files:
 
 additional_build_files
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -110,6 +114,8 @@ Each list item must be a dictionary containing the following (non-optional) keys
       build context directory that should contain the source file(s) (e.g., ``files/configs``).
       This may not be an absolute path or contain ``..`` within the path. This directory
       will be created for you if it does not exist.
+
+.. _additional_build_steps:
 
 additional_build_steps
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -179,12 +185,14 @@ build instruction file, so they will persist if you run your container build man
 
 If you specify the same variable in the execution environment definition and at the command line with the CLI :ref:`build-arg` flag, the CLI value will take higher precedence (the CLI value will override the value in the execution environment definition).
 
+.. _dependencies:
+
 dependencies
 ^^^^^^^^^^^^
 
 Specifies dependencies to install into the final image, including ``ansible-core``, ``ansible-runner``, Python packages, system packages, and Ansible Collections. Ansible Builder automatically installs dependencies for any Ansible Collections you install.
 
-In general you can use standard syntax to constrain package versions. Use the same syntax you would pass to ``dnf``, ``pip``, ``ansible-galaxy``, or any other package management utility. You can also define your packages or collections in separate files and reference those files in the ``dependencies`` section of your execution environment definition file.
+In general, you can use standard syntax to constrain package versions. Use the same syntax you would pass to ``dnf``, ``pip``, ``ansible-galaxy``, or any other package management utility. You can also define your packages or collections in separate files and reference those files in the ``dependencies`` section of your execution environment definition file.
 
 The following keys are valid for this section:
 
@@ -230,14 +238,14 @@ The following keys are valid for this section:
 
     ``python_interpreter``
       A dictionary that defines the Python system package name to be installed by
-      dnf (``package_system``) and/or a path to the Python interpreter to be used
+      ``dnf`` (``package_system``) and/or a path to the Python interpreter to be used
       (``python_path``).
 
     ``system``
       The system packages to be installed, in bindep format. This may either
       be a filename, or a list of requirements (see below for an example).
 
-The following example uses filenames that contain the various dependencies:
+The following example uses filenames that contain various dependencies:
 
 .. code:: yaml
 
@@ -275,6 +283,7 @@ And this example uses inline values:
             package_system: "python310"
             python_path: "/usr/bin/python3.10"
 
+.. _images:
 
 images
 ^^^^^^
@@ -289,10 +298,12 @@ Valid keys for this section are:
       key if the image is mirrored within your repository, but signed with the original
       image's signature key.
 
+.. _image_verification:
+
 image verification
 """"""""""""""""""
 You can verify signed container images if you are using the ``podman`` container
-runtime. Set the :ref:`container-policy` CLI option to control how this data is used in relation to a Podman
+runtime. Set the :ref:`container-policy` CLI option to control how this data is used with a Podman
 `policy.json <https://github.com/containers/image/blob/main/docs/containers-policy.json.5.md>`_
 file for container image signature validation.
 
@@ -310,6 +321,8 @@ file for container image signature validation.
     :ref:`context directory <context>` that will be used during the build to
     validate the images.
 
+.. _options:
+
 options
 ^^^^^^^
 
@@ -320,7 +333,7 @@ builder runtime functionality. Valid keys for this section are:
       A dictionary with keys that allow for customization of the container ``ENTRYPOINT`` and
       ``CMD`` directives (and related behaviors). Customizing these behaviors is an advanced
       task, and may result in subtle, difficult-to-debug failures. As the provided defaults for
-      this section control a number of intertwined behaviors, overriding any value will skip all
+      this section control several intertwined behaviors, overriding any value will skip all
       remaining defaults in this dictionary.
       Valid keys are:
 
@@ -373,7 +386,7 @@ builder runtime functionality. Valid keys for this section are:
       The default value ``1000``.
 
     ``tags``
-      Specifies the name which is assigned to resulting image if build process completes successfully.
+      Specifies the names that are assigned to the resulting image if the build process completes successfully.
       The default value is ``ansible-execution-env:latest``.
 
 Example ``options`` section:
@@ -392,6 +405,8 @@ Example ``options`` section:
         user: bob
         tags:
           - ee_development:latest
+
+.. _version:
 
 version
 ^^^^^^^
